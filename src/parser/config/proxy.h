@@ -20,7 +20,10 @@ enum class ProxyType
     HTTP,
     HTTPS,
     SOCKS5,
-    WireGuard
+    WireGuard,
+    VLESS,
+    Hysteria,
+    Hysteria2
 };
 
 inline String getProxyTypeName(ProxyType type)
@@ -33,6 +36,12 @@ inline String getProxyTypeName(ProxyType type)
         return "SSR";
     case ProxyType::VMess:
         return "VMess";
+   case ProxyType::VLESS:
+        return "VLESS";
+   case ProxyType::Hysteria:
+        return "Hysteria";
+   case ProxyType::Hysteria2:
+        return "Hysteria2";
     case ProxyType::Trojan:
         return "Trojan";
     case ProxyType::Snell:
@@ -73,12 +82,23 @@ struct Proxy
     String FakeType;
     bool TLSSecure = false;
 
+    String Flow;
+    bool FlowShow = false;
+
     String Host;
     String Path;
     String Edge;
 
     String QUICSecure;
     String QUICSecret;
+    String GRPCServiceName;
+    String GRPCMode;
+
+    String Auth;
+    String Alpn;
+    String UpMbps;
+    String DownMbps;
+    String Insecure;
 
     tribool UDP;
     tribool TCPFastOpen;
@@ -99,11 +119,18 @@ struct Proxy
     uint16_t KeepAlive = 0;
     String TestUrl;
     String ClientId;
+
+    String Fingerprint;
+    String ShortId;
+    String OBFSPassword;
 };
 
 #define SS_DEFAULT_GROUP "SSProvider"
 #define SSR_DEFAULT_GROUP "SSRProvider"
 #define V2RAY_DEFAULT_GROUP "V2RayProvider"
+#define XRAY_DEFAULT_GROUP "XRayProvider"
+#define HYSTERIA_DEFAULT_GROUP "HysteriaProvider"
+#define HYSTERIA2_DEFAULT_GROUP "Hysteria2Provider"
 #define SOCKS_DEFAULT_GROUP "SocksProvider"
 #define HTTP_DEFAULT_GROUP "HTTPProvider"
 #define TROJAN_DEFAULT_GROUP "TrojanProvider"

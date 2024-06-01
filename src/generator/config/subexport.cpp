@@ -124,7 +124,8 @@ bool applyMatcher(const std::string &rule, std::string &real_rule, const Proxy &
                                                             {ProxyType::HTTP,         "HTTP"},
                                                             {ProxyType::HTTPS,        "HTTPS"},
                                                             {ProxyType::SOCKS5,       "SOCKS5"},
-                                                            {ProxyType::WireGuard,    "WIREGUARD"}};
+                                                            {ProxyType::WireGuard,    "WIREGUARD"},
+    {ProxyType::VLESS,"VLESS"}, {ProxyType::Hysteria, "HYSTERIA"}, {ProxyType::Hysteria2, "HYSTERIA2"}};
     if(startsWith(rule, "!!GROUP="))
     {
         regGetMatch(rule, group_regex, 3, 0, &target, &ret_real_rule);
@@ -275,6 +276,15 @@ void proxyToClash(std::vector<Proxy> &nodes, YAML::Node &yamlnode, const ProxyGr
         singleproxy["name"] = x.Remark;
         singleproxy["server"] = x.Hostname;
         singleproxy["port"] = x.Port;
+        if(!x.PublicKey.empty()) {
+            singleproxy["reality-opts"]["pbk"] = x.PublicKey;
+            if(!x.ShortId.empty()) {
+                singleproxy["reality-opts"]["short-id"] = x.ShortId;
+            }
+        }
+        singleproxy["client-fingerprint"] = "chrome";
+        if (!x.Fingerprint.empty())
+            singleproxy["client-fingerprint"] = x.Fingerprint;
 
         switch(x.Type)
         {
@@ -304,6 +314,12 @@ void proxyToClash(std::vector<Proxy> &nodes, YAML::Node &yamlnode, const ProxyGr
                 singleproxy["plugin-opts"]["mux"] = pluginopts.find("mux") != std::string::npos;
                 if(!scv.is_undef())
                     singleproxy["plugin-opts"]["skip-cert-verify"] = scv.get();
+                break;
+            case "shadow-tls"_hash:
+                singleproxy["plugin"] = "shadow-tls";
+                singleproxy["plugin-opts"]["host"] = getUrlArg(pluginopts, "host");
+                singleproxy["plugin-opts"]["password"] = getUrlArg(pluginopts, "password");
+                singleproxy["plugin-opts"]["version"] = getUrlArg(pluginopts, "version");
                 break;
             }
             break;
@@ -364,6 +380,103 @@ void proxyToClash(std::vector<Proxy> &nodes, YAML::Node &yamlnode, const ProxyGr
                 continue;
             }
             break;
+        case ProxyType::Hysteria:
+                singleproxy["type"] = "hysteria";
+                singleproxy["auth_str"] = x.Auth;
+                singleproxy["up"] = x.UpMbps;
+                singleproxy["down"] = x.DownMbps;
+                if (!ext.tfo.is_undef())
+                    singleproxy["fast-open"] = ext.tfo.get();
+                if (!x.FakeType.empty())
+                    singleproxy["protocol"] = x.FakeType;
+                if (!x.Host.empty())
+                    singleproxy["sni"] = x.Host;
+                if (!scv.is_undef())
+                    singleproxy["skip-cert-verify"] = scv.get();
+                if (x.Insecure == "1")
+                    singleproxy["skip-cert-verify"] = true;
+                if (!x.Alpn.empty())
+                    singleproxy["alpn"].push_back(x.Alpn);
+                if (!x.OBFSParam.empty())
+                    singleproxy["obfs"] = x.OBFSParam;
+                break;
+            case ProxyType::Hysteria2:
+                singleproxy["type"] = "hysteria2";
+                singleproxy["password"] = x.Password;
+                if (!x.UpMbps.empty())
+                    singleproxy["up"] = x.UpMbps;
+                if (!x.DownMbps.empty())
+                    singleproxy["down"] = x.DownMbps;
+                if (!x.Host.empty())
+                    singleproxy["sni"] = x.Host;
+                if (!scv.is_undef())
+                    singleproxy["skip-cert-verify"] = scv.get();
+                if (!x.AllowInsecure.is_undef())
+                    singleproxy["skip-cert-verify"] = x.AllowInsecure.get();
+                if (!x.Alpn.empty())
+                    singleproxy["alpn"].push_back(x.Alpn);
+                if (!x.OBFSParam.empty())
+                    singleproxy["obfs"] = x.OBFSParam;
+                if (!x.OBFSPassword.empty())
+                    singleproxy["obfs-password"] = x.OBFSPassword;
+                break;
+            case ProxyType::VLESS:
+                singleproxy["type"] = "vless";
+                singleproxy["uuid"] = x.UserId;
+                singleproxy["tls"] = x.TLSSecure;
+                if (!ext.tfo.is_undef())
+                    singleproxy["tfo"] = ext.tfo.get();
+                if (ext.xudp && udp)
+                    singleproxy["xudp"] = true;
+                if (!x.Host.empty())
+                    singleproxy["servername"] = x.Host;
+                if (!x.Flow.empty())
+                    singleproxy["flow"] = x.Flow;
+                if (!scv.is_undef())
+                    singleproxy["skip-cert-verify"] = scv.get();
+                switch (hash_(x.TransferProtocol)) {
+                    case "tcp"_hash:
+                        break;
+                    case "ws"_hash:
+                        singleproxy["network"] = x.TransferProtocol;
+                        if (ext.clash_new_field_name) {
+                            singleproxy["ws-opts"]["path"] = x.Path;
+                            if (!x.Host.empty())
+                                singleproxy["ws-opts"]["headers"]["Host"] = x.Host;
+                            if (!x.Edge.empty())
+                                singleproxy["ws-opts"]["headers"]["Edge"] = x.Edge;
+                        } else {
+                            singleproxy["ws-path"] = x.Path;
+                            if (!x.Host.empty())
+                                singleproxy["ws-headers"]["Host"] = x.Host;
+                            if (!x.Edge.empty())
+                                singleproxy["ws-headers"]["Edge"] = x.Edge;
+                        }
+                        break;
+                    case "http"_hash:
+                        singleproxy["network"] = x.TransferProtocol;
+                        singleproxy["http-opts"]["method"] = "GET";
+                        singleproxy["http-opts"]["path"].push_back(x.Path);
+                        if (!x.Host.empty())
+                            singleproxy["http-opts"]["headers"]["Host"].push_back(x.Host);
+                        if (!x.Edge.empty())
+                            singleproxy["http-opts"]["headers"]["Edge"].push_back(x.Edge);
+                        break;
+                    case "h2"_hash:
+                        singleproxy["network"] = x.TransferProtocol;
+                        singleproxy["h2-opts"]["path"] = x.Path;
+                        if (!x.Host.empty())
+                            singleproxy["h2-opts"]["host"].push_back(x.Host);
+                        break;
+                    case "grpc"_hash:
+                        singleproxy["network"] = x.TransferProtocol;
+                        singleproxy["grpc-opts"]["grpc-mode"] = x.GRPCMode;
+                        singleproxy["grpc-opts"]["grpc-service-name"] = x.GRPCServiceName;
+                        break;
+                    default:
+                        continue;
+                }
+                break;
         case ProxyType::ShadowsocksR:
             //ignoring all nodes with unsupported obfs, protocols and encryption
             if(ext.filter_deprecated)
