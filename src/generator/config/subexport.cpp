@@ -277,7 +277,7 @@ void proxyToClash(std::vector<Proxy> &nodes, YAML::Node &yamlnode, const ProxyGr
         singleproxy["server"] = x.Hostname;
         singleproxy["port"] = x.Port;
         if(!x.PublicKey.empty()) {
-            singleproxy["reality-opts"]["pbk"] = x.PublicKey;
+            singleproxy["reality-opts"]["public-key"] = x.PublicKey;
             if(!x.ShortId.empty()) {
                 singleproxy["reality-opts"]["short-id"] = x.ShortId;
             }
